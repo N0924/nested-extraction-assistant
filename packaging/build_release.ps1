@@ -11,10 +11,19 @@ $releaseDirectory = Join-Path $projectRoot "release"
 $appName = ([char[]](0x5D4C, 0x5957, 0x89E3, 0x538B, 0x52A9, 0x624B)) -join ""
 $englishLabel = ([char[]](0x82F1, 0x6587)) -join ""
 $guideLabel = ([char[]](0x4F7F, 0x7528, 0x8BF4, 0x660E)) -join ""
+$mainLabel = ([char[]](0x4E3B, 0x754C, 0x9762)) -join ""
+$passwordPoolLabel = ([char[]](0x5BC6, 0x7801, 0x6C60)) -join ""
+$settingsLabel = ([char[]](0x8BBE, 0x7F6E, 0x754C, 0x9762)) -join ""
+$publicLabel = ([char[]](0x516C, 0x5F00, 0x7248)) -join ""
 $artifactName = "$appName-v$Version-Windows-x64"
 $localizedExecutableName = "$appName.exe"
 $englishReadmeName = "README-$englishLabel.md"
 $userGuideName = "$guideLabel.txt"
+$readmeAssetNames = @(
+    "$mainLabel.png",
+    "$passwordPoolLabel.png",
+    "$settingsLabel-$publicLabel.png"
+)
 
 function Reset-ProjectDirectory {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -30,14 +39,16 @@ function Reset-ProjectDirectory {
     New-Item -ItemType Directory -Path $fullPath | Out-Null
 }
 
-foreach ($requiredFile in @(
+$requiredFiles = @(
     "app.py",
     "README.md",
     $englishReadmeName,
     "packaging\$userGuideName",
     "NOTICE.md",
     "LICENSE"
-)) {
+) + @($readmeAssetNames | ForEach-Object { "assets\$_" })
+
+foreach ($requiredFile in $requiredFiles) {
     $requiredPath = Join-Path $projectRoot $requiredFile
     if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
         throw "Required release file is missing: $requiredPath"
@@ -74,7 +85,8 @@ Reset-ProjectDirectory -Path $buildDirectory
 Reset-ProjectDirectory -Path $distDirectory
 Reset-ProjectDirectory -Path $releaseDirectory
 
-$assetsArgument = (Join-Path $projectRoot "assets") + ";assets"
+$iconAssetArgument = (Join-Path $projectRoot "assets\app.ico") + ";assets"
+$logoAssetArgument = (Join-Path $projectRoot "assets\app-logo.png") + ";assets"
 & $PythonExecutable -m PyInstaller `
     --noconfirm `
     --clean `
@@ -82,7 +94,8 @@ $assetsArgument = (Join-Path $projectRoot "assets") + ";assets"
     --windowed `
     --name "NestedExtractionAssistant" `
     --icon (Join-Path $projectRoot "assets\app.ico") `
-    --add-data $assetsArgument `
+    --add-data $iconAssetArgument `
+    --add-data $logoAssetArgument `
     --version-file (Join-Path $projectRoot "packaging\windows_version_info.txt") `
     --workpath $buildDirectory `
     --distpath $distDirectory `
@@ -121,6 +134,12 @@ Copy-Item -LiteralPath (Join-Path $projectRoot "README.md") -Destination $packag
 Copy-Item -LiteralPath (Join-Path $projectRoot $englishReadmeName) -Destination $packageDirectory
 Copy-Item -LiteralPath (Join-Path $projectRoot "NOTICE.md") -Destination $packageDirectory
 Copy-Item -LiteralPath (Join-Path $projectRoot "LICENSE") -Destination $packageDirectory
+$packageAssetsDirectory = Join-Path $packageDirectory "assets"
+New-Item -ItemType Directory -Path $packageAssetsDirectory | Out-Null
+foreach ($assetName in $readmeAssetNames) {
+    $assetPath = Join-Path $projectRoot "assets\$assetName"
+    Copy-Item -LiteralPath $assetPath -Destination $packageAssetsDirectory
+}
 
 $releaseZip = Join-Path $releaseDirectory "$artifactName.zip"
 Compress-Archive `

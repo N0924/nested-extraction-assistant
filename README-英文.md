@@ -4,6 +4,8 @@
 
 A local archive extraction tool for Windows, designed for nested archives, incorrect file extensions, disguised files, and common split archives.
 
+![Main window](assets/主界面.png)
+
 ## Features
 
 - Automatically detects and extracts multiple disguised archive formats;
@@ -13,6 +15,10 @@ A local archive extraction tool for Windows, designed for nested archives, incor
 - Allows a separate password for each task or ordered attempts from a saved password pool;
 - Supports dragging files or folders into a task list with progress and history;
 - Keeps source files unchanged and stores working files and final results in separate directories.
+
+![Password pool](assets/密码池.png)
+
+![Settings](assets/设置界面-公开版.png)
 
 ## Requirements
 

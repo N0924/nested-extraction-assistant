@@ -20,6 +20,9 @@ release/
 *.7z
 *.001
 
+# The original screenshot contains a local user path; publish only the redacted copy.
+assets/设置界面.png
+
 # 本机教学记录保留在工作目录，不进入公开源码仓库。
 AGENTS.md
 docs/learning-contract.md
