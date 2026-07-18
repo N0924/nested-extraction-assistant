@@ -97,6 +97,8 @@ powershell -ExecutionPolicy Bypass -File .\packaging\build_release.ps1
 
 脚本会在 `release/` 生成 Windows 便携版 ZIP 和 SHA-256 校验文件。ZIP 内的主程序名为 `嵌套解压助手.exe`，同时包含运行库、说明和许可证。使用时必须完整解压 ZIP，不能单独移动 EXE。程序的资源定位同时兼容源码目录和 PyInstaller 打包目录。
 
+首次公开发布分为两个独立步骤：`packaging/publish_github.ps1` 只创建仓库并推送源码，不上传便携包；确认 GitHub 源码和“关于”链接正确后，再运行 `packaging/publish_release.ps1` 上传版本标签、便携版 ZIP 和校验文件。
+
 ## 测试
 
 ```powershell

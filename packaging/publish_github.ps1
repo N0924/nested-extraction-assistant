@@ -1,22 +1,26 @@
 param(
     [string]$Repository = "N0924/nested-extraction-assistant",
-    [string]$Version = "0.2.0",
     [string]$Proxy = "http://127.0.0.1:10808"
 )
 
 $ErrorActionPreference = "Stop"
 $projectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-$tagName = "v$Version"
-$appName = ([char[]](0x5D4C, 0x5957, 0x89E3, 0x538B, 0x52A9, 0x624B)) -join ""
-$artifactName = "NestedExtractionAssistant-v$Version-win64"
-$releaseZip = Join-Path $projectRoot "release\$artifactName.zip"
-$checksums = Join-Path $projectRoot "release\SHA256SUMS.txt"
-$releaseNotes = Join-Path $PSScriptRoot "release-notes-v$Version.md"
-$expectedRemote = "https://github.com/$Repository.git"
+$expectedRemotes = @(
+    "https://github.com/$Repository",
+    "https://github.com/$Repository.git"
+)
 
-foreach ($requiredFile in @($releaseZip, $checksums, $releaseNotes)) {
-    if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
-        throw "A release file is missing. Rebuild before publishing: $requiredFile"
+function Test-NativeSuccess {
+    param([Parameter(Mandatory = $true)][scriptblock]$Command)
+
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "SilentlyContinue"
+        & $Command *> $null
+        return $LASTEXITCODE -eq 0
+    }
+    finally {
+        $ErrorActionPreference = $previousPreference
     }
 }
 
@@ -43,7 +47,7 @@ try {
 
     $pendingChanges = & git -C $projectRoot status --porcelain
     if ($LASTEXITCODE -ne 0 -or $pendingChanges) {
-        throw "The project has uncommitted changes. Publishing stopped."
+        throw "The project has uncommitted changes. Source publishing stopped."
     }
 
     & gh auth status
@@ -51,8 +55,9 @@ try {
         throw "GitHub CLI authentication is invalid. Run gh auth login again."
     }
 
-    & gh repo view $Repository --json nameWithOwner 1>$null 2>$null
-    $repositoryExists = $LASTEXITCODE -eq 0
+    $repositoryExists = Test-NativeSuccess {
+        gh repo view $Repository --json nameWithOwner
+    }
 
     if (-not $repositoryExists) {
         & gh repo create $Repository `
@@ -71,15 +76,21 @@ try {
             throw "The target repository exists but is not public: $Repository"
         }
 
-        $origin = & git -C $projectRoot remote get-url origin 2>$null
+        $remotes = @(& git -C $projectRoot remote)
         if ($LASTEXITCODE -ne 0) {
-            & git -C $projectRoot remote add origin $expectedRemote
+            throw "Reading Git remotes failed."
+        }
+        if ($remotes -notcontains "origin") {
+            & git -C $projectRoot remote add origin $expectedRemotes[1]
             if ($LASTEXITCODE -ne 0) {
                 throw "Adding the GitHub remote failed."
             }
         }
-        elseif ($origin -ne $expectedRemote) {
-            throw "The origin remote points elsewhere: $origin"
+        else {
+            $origin = (& git -C $projectRoot remote get-url origin).TrimEnd("/")
+            if ($LASTEXITCODE -ne 0 -or $expectedRemotes -notcontains $origin) {
+                throw "The origin remote points elsewhere: $origin"
+            }
         }
 
         & git -C $projectRoot push --set-upstream origin main
@@ -88,37 +99,8 @@ try {
         }
     }
 
-    & gh release view $tagName --repo $Repository 1>$null 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        throw "Release $tagName already exists and will not be overwritten."
-    }
-
-    & git -C $projectRoot rev-parse --verify "refs/tags/$tagName" 1>$null 2>$null
-    if ($LASTEXITCODE -ne 0) {
-        & git -C $projectRoot tag -a $tagName -m "$appName $tagName"
-        if ($LASTEXITCODE -ne 0) {
-            throw "Creating the local release tag failed."
-        }
-    }
-
-    & git -C $projectRoot push origin $tagName
-    if ($LASTEXITCODE -ne 0) {
-        throw "Pushing the release tag failed."
-    }
-
-    & gh release create $tagName `
-        $releaseZip `
-        $checksums `
-        --repo $Repository `
-        --verify-tag `
-        --title "$appName $tagName" `
-        --notes-file $releaseNotes
-    if ($LASTEXITCODE -ne 0) {
-        throw "Creating the GitHub Release failed."
-    }
-
-    Write-Host "Published: https://github.com/$Repository"
-    Write-Host "Release: https://github.com/$Repository/releases/tag/$tagName"
+    Write-Host "Source published: https://github.com/$Repository"
+    Write-Host "No release files were uploaded."
 }
 finally {
     $env:HTTP_PROXY = $oldHttpProxy

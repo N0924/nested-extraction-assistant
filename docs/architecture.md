@@ -641,4 +641,5 @@ Apate 的公开源代码使用 GPL-3.0。本项目依据其代码实现兼容还
 
 1. 构建过程保留英文内部目录名，最终发布包中的程序名统一为 `嵌套解压助手.exe`；
 2. “帮助 → 关于”显示目标仓库 `https://github.com/N0924/nested-extraction-assistant`，点击后使用系统默认浏览器打开；
-3. 首次远程发布由 `packaging/publish_github.ps1` 创建公开仓库、推送 `main`、建立版本标签并上传 Release 文件。
+3. `packaging/publish_github.ps1` 只创建公开仓库并推送 `main`，不上传便携包；
+4. 远程源码和“关于”链接核对通过后，再由 `packaging/publish_release.ps1` 验证远程提交、建立版本标签并上传 Release 文件。
