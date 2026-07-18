@@ -1,0 +1,26 @@
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+__pycache__/
+ui/__pycache__/
+tests/__pycache__/
+*.pyc
+runtime/
+reports/
+*.log
+build/
+dist/
+release/
+*.spec
+*.exe
+*.zip
+*.rar
+*.7z
+*.001
+
+# 本机教学记录保留在工作目录，不进入公开源码仓库。
+AGENTS.md
+docs/learning-contract.md
+lesson_*.py

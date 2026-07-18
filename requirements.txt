@@ -1,0 +1,2 @@
+# 当前版本使用 Python 标准库、Windows Shell 拖放接口和系统已安装的 WinRAR。
+# 不需要 Python 第三方依赖。
