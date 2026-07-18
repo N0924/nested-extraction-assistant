@@ -93,6 +93,30 @@ try {
             }
         }
 
+        & git -C $projectRoot fetch origin main
+        if ($LASTEXITCODE -ne 0) {
+            throw "Fetching the GitHub main branch failed. Nothing was pushed."
+        }
+
+        $localCommit = (& git -C $projectRoot rev-parse main).Trim()
+        $remoteCommit = (& git -C $projectRoot rev-parse origin/main).Trim()
+        if ($LASTEXITCODE -ne 0) {
+            throw "Reading local or remote commit information failed."
+        }
+
+        if ($localCommit -ne $remoteCommit) {
+            $commonCommit = (& git -C $projectRoot merge-base main origin/main).Trim()
+            if ($LASTEXITCODE -ne 0) {
+                throw "Comparing local and remote history failed."
+            }
+            if ($commonCommit -eq $localCommit) {
+                throw "GitHub main has newer commits. Review and merge them before publishing."
+            }
+            if ($commonCommit -ne $remoteCommit) {
+                throw "Local and GitHub main have diverged. Review and merge before publishing."
+            }
+        }
+
         & git -C $projectRoot push --set-upstream origin main
         if ($LASTEXITCODE -ne 0) {
             throw "Pushing the main branch failed."
