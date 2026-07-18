@@ -8,9 +8,13 @@ $projectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $buildDirectory = Join-Path $projectRoot "build\pyinstaller"
 $distDirectory = Join-Path $projectRoot "dist"
 $releaseDirectory = Join-Path $projectRoot "release"
-$artifactName = "NestedExtractionAssistant-v$Version-win64"
 $appName = ([char[]](0x5D4C, 0x5957, 0x89E3, 0x538B, 0x52A9, 0x624B)) -join ""
+$englishLabel = ([char[]](0x82F1, 0x6587)) -join ""
+$guideLabel = ([char[]](0x4F7F, 0x7528, 0x8BF4, 0x660E)) -join ""
+$artifactName = "$appName-v$Version-Windows-x64"
 $localizedExecutableName = "$appName.exe"
+$englishReadmeName = "README-$englishLabel.md"
+$userGuideName = "$guideLabel.txt"
 
 function Reset-ProjectDirectory {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -26,7 +30,14 @@ function Reset-ProjectDirectory {
     New-Item -ItemType Directory -Path $fullPath | Out-Null
 }
 
-foreach ($requiredFile in @("app.py", "README.md", "NOTICE.md", "LICENSE")) {
+foreach ($requiredFile in @(
+    "app.py",
+    "README.md",
+    $englishReadmeName,
+    "packaging\$userGuideName",
+    "NOTICE.md",
+    "LICENSE"
+)) {
     $requiredPath = Join-Path $projectRoot $requiredFile
     if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
         throw "Required release file is missing: $requiredPath"
@@ -38,7 +49,15 @@ if ($LASTEXITCODE -ne 0) {
     throw "PyInstaller is not installed for: $PythonExecutable"
 }
 
-$tkPaths = & $PythonExecutable -c "import tkinter; root = tkinter.Tk(); root.withdraw(); print(root.tk.eval('set tcl_library')); print(root.tk.eval('set tk_library')); root.destroy()"
+$tkProbe = @(
+    "import tkinter",
+    "root = tkinter.Tk()",
+    "root.withdraw()",
+    "print(root.tk.eval('set tcl_library'))",
+    "print(root.tk.eval('set tk_library'))",
+    "root.destroy()"
+) -join "; "
+$tkPaths = & $PythonExecutable -c $tkProbe
 if ($LASTEXITCODE -ne 0 -or $tkPaths.Count -ne 2) {
     throw "Unable to locate the Tcl/Tk script libraries."
 }
@@ -96,13 +115,18 @@ Move-Item -LiteralPath $packagedExecutable -Destination $localizedExecutable
 if (-not (Test-Path -LiteralPath $localizedExecutable -PathType Leaf)) {
     throw "The localized executable was not created: $localizedExecutable"
 }
-Copy-Item -LiteralPath (Join-Path $projectRoot "packaging\USER_GUIDE.zh-CN.txt") -Destination $packageDirectory
+$userGuidePath = Join-Path $projectRoot "packaging\$userGuideName"
+Copy-Item -LiteralPath $userGuidePath -Destination $packageDirectory
 Copy-Item -LiteralPath (Join-Path $projectRoot "README.md") -Destination $packageDirectory
+Copy-Item -LiteralPath (Join-Path $projectRoot $englishReadmeName) -Destination $packageDirectory
 Copy-Item -LiteralPath (Join-Path $projectRoot "NOTICE.md") -Destination $packageDirectory
 Copy-Item -LiteralPath (Join-Path $projectRoot "LICENSE") -Destination $packageDirectory
 
 $releaseZip = Join-Path $releaseDirectory "$artifactName.zip"
-Compress-Archive -Path (Join-Path $packageDirectory "*") -DestinationPath $releaseZip -CompressionLevel Optimal
+Compress-Archive `
+    -Path (Join-Path $packageDirectory "*") `
+    -DestinationPath $releaseZip `
+    -CompressionLevel Optimal
 
 $checksums = @($releaseZip) | ForEach-Object {
     $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $_

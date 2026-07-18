@@ -8,10 +8,11 @@ $ErrorActionPreference = "Stop"
 $projectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $tagName = "v$Version"
 $appName = ([char[]](0x5D4C, 0x5957, 0x89E3, 0x538B, 0x52A9, 0x624B)) -join ""
-$artifactName = "NestedExtractionAssistant-v$Version-win64"
+$releaseNotesLabel = ([char[]](0x7248, 0x672C, 0x8BF4, 0x660E)) -join ""
+$artifactName = "$appName-v$Version-Windows-x64"
 $releaseZip = Join-Path $projectRoot "release\$artifactName.zip"
 $checksums = Join-Path $projectRoot "release\SHA256SUMS.txt"
-$releaseNotes = Join-Path $PSScriptRoot "release-notes-v$Version.md"
+$releaseNotes = Join-Path $PSScriptRoot "$releaseNotesLabel-$tagName.md"
 $expectedRemotes = @(
     "https://github.com/$Repository",
     "https://github.com/$Repository.git"
