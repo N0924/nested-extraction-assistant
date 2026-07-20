@@ -1,6 +1,6 @@
 param(
     [string]$PythonExecutable = "python",
-    [string]$Version = "0.2.0"
+    [string]$Version = "0.2.1"
 )
 
 $ErrorActionPreference = "Stop"
@@ -60,27 +60,6 @@ if ($LASTEXITCODE -ne 0) {
     throw "PyInstaller is not installed for: $PythonExecutable"
 }
 
-$tkProbe = @(
-    "import tkinter",
-    "root = tkinter.Tk()",
-    "root.withdraw()",
-    "print(root.tk.eval('set tcl_library'))",
-    "print(root.tk.eval('set tk_library'))",
-    "root.destroy()"
-) -join "; "
-$tkPaths = & $PythonExecutable -c $tkProbe
-if ($LASTEXITCODE -ne 0 -or $tkPaths.Count -ne 2) {
-    throw "Unable to locate the Tcl/Tk script libraries."
-}
-$tclLibrary = [IO.Path]::GetFullPath($tkPaths[0])
-$tkLibrary = [IO.Path]::GetFullPath($tkPaths[1])
-if (-not (Test-Path -LiteralPath (Join-Path $tclLibrary "init.tcl") -PathType Leaf)) {
-    throw "The Tcl library does not contain init.tcl: $tclLibrary"
-}
-if (-not (Test-Path -LiteralPath (Join-Path $tkLibrary "tk.tcl") -PathType Leaf)) {
-    throw "The Tk library does not contain tk.tcl: $tkLibrary"
-}
-
 Reset-ProjectDirectory -Path $buildDirectory
 Reset-ProjectDirectory -Path $distDirectory
 Reset-ProjectDirectory -Path $releaseDirectory
@@ -110,11 +89,6 @@ $builtExecutable = Join-Path $builtDirectory "NestedExtractionAssistant.exe"
 if (-not (Test-Path -LiteralPath $builtExecutable -PathType Leaf)) {
     throw "The packaged executable was not created: $builtExecutable"
 }
-
-$libraryDirectory = Join-Path $builtDirectory "lib"
-New-Item -ItemType Directory -Path $libraryDirectory | Out-Null
-Copy-Item -LiteralPath $tclLibrary -Destination $libraryDirectory -Recurse
-Copy-Item -LiteralPath $tkLibrary -Destination $libraryDirectory -Recurse
 
 $packageDirectory = Join-Path $releaseDirectory $artifactName
 New-Item -ItemType Directory -Path $packageDirectory | Out-Null
@@ -147,13 +121,7 @@ Compress-Archive `
     -DestinationPath $releaseZip `
     -CompressionLevel Optimal
 
-$checksums = @($releaseZip) | ForEach-Object {
-    $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $_
-    "$($hash.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($_))"
-}
-$checksums | Set-Content -Encoding utf8 (Join-Path $releaseDirectory "SHA256SUMS.txt")
-
 Write-Host "Release files created:"
-Get-Item -LiteralPath $releaseZip, (Join-Path $releaseDirectory "SHA256SUMS.txt") |
+Get-Item -LiteralPath $releaseZip |
     Select-Object Name, Length, LastWriteTime |
     Format-Table -AutoSize

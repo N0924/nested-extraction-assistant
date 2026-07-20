@@ -10,7 +10,7 @@ from ui.app_assets import APP_LOGO_NAME, ASSET_DIRECTORY, apply_window_icon, res
 
 
 APP_NAME = "嵌套解压助手"
-APP_VERSION = "0.2.0"
+APP_VERSION = "0.2.1"
 PROJECT_URL = "https://github.com/N0924/nested-extraction-assistant"
 
 

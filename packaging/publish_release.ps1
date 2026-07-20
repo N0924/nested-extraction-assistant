@@ -1,6 +1,6 @@
 param(
     [string]$Repository = "N0924/nested-extraction-assistant",
-    [string]$Version = "0.2.0",
+    [string]$Version = "0.2.1",
     [string]$Proxy = "http://127.0.0.1:10808"
 )
 
@@ -11,7 +11,6 @@ $appName = ([char[]](0x5D4C, 0x5957, 0x89E3, 0x538B, 0x52A9, 0x624B)) -join ""
 $releaseNotesLabel = ([char[]](0x7248, 0x672C, 0x8BF4, 0x660E)) -join ""
 $artifactName = "$appName-v$Version-Windows-x64"
 $releaseZip = Join-Path $projectRoot "release\$artifactName.zip"
-$checksums = Join-Path $projectRoot "release\SHA256SUMS.txt"
 $releaseNotes = Join-Path $PSScriptRoot "$releaseNotesLabel-$tagName.md"
 $expectedRemotes = @(
     "https://github.com/$Repository",
@@ -32,7 +31,7 @@ function Test-NativeSuccess {
     }
 }
 
-foreach ($requiredFile in @($releaseZip, $checksums, $releaseNotes)) {
+foreach ($requiredFile in @($releaseZip, $releaseNotes)) {
     if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
         throw "A release file is missing. Rebuild before publishing: $requiredFile"
     }
@@ -137,7 +136,6 @@ try {
 
     & gh release create $tagName `
         $releaseZip `
-        $checksums `
         --repo $Repository `
         --verify-tag `
         --title "$appName $tagName" `
